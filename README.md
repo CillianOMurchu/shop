@@ -108,7 +108,7 @@ curl -X POST http://localhost:3001/api/v1/product \
 ## Interesting images along the way
 
 ### A few changes
-![Changes Interface](src/assets/changes.png)
+![Changes Interface](frontend/src/assets/changes.png)
 
 ## Features
 
