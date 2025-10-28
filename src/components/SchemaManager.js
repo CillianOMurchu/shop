@@ -15,7 +15,7 @@ const SchemaManager = () => {
     required: false
   });
 
-  const fieldTypes = ['string', 'text', 'number', 'boolean', 'date'];
+  const fieldTypes = ['string', 'text', 'number', 'boolean', 'date', 'image', 'image_gallery'];
 
   const handleCreateSchema = () => {
     if (!newSchemaName.trim()) return;

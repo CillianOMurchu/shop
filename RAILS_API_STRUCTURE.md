@@ -344,3 +344,221 @@ This structure provides:
 4. Rails conventions (singular parameter keys, REST endpoints)
 5. UUID support for better frontend integration
 6. JSON serialization for flexible attributes
+7. **Image upload and management system**
+
+## Image Upload System
+
+### Frontend Image Handling
+The frontend stores images as base64 data URLs in Redux for development. In production, images would be uploaded to the Rails backend.
+
+### Rails Image Upload Implementation
+
+#### Additional Routes
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  namespace :api do
+    namespace :v1 do
+      # ... existing routes ...
+      
+      # Image upload routes
+      namespace :uploads do
+        resources :images, only: [:create, :show, :destroy] do
+          collection do
+            post :batch  # For multiple image uploads
+          end
+        end
+      end
+    end
+  end
+end
+```
+
+#### Upload Model
+```ruby
+# app/models/upload.rb
+class Upload < ApplicationRecord
+  has_one_attached :file
+  
+  validates :name, presence: true
+  validates :file, presence: true, blob: { content_type: ['image/png', 'image/jpg', 'image/jpeg', 'image/gif', 'image/webp'] }
+  
+  def url
+    Rails.application.routes.url_helpers.rails_blob_url(file, only_path: false)
+  end
+  
+  def thumbnail_url(size = '150x150')
+    Rails.application.routes.url_helpers.rails_representation_url(
+      file.variant(resize_to_fill: size.split('x').map(&:to_i)), 
+      only_path: false
+    )
+  end
+  
+  def as_json(options = {})
+    {
+      id: id,
+      name: name,
+      size: file.byte_size,
+      url: url,
+      thumbnail_url: thumbnail_url,
+      content_type: file.content_type,
+      uploaded_at: created_at
+    }
+  end
+end
+```
+
+#### Upload Controller
+```ruby
+# app/controllers/api/v1/uploads/images_controller.rb
+class Api::V1::Uploads::ImagesController < ApplicationController
+  before_action :set_upload, only: [:show, :destroy]
+  
+  def create
+    @upload = Upload.new(upload_params)
+    @upload.file.attach(params[:image]) if params[:image]
+    
+    if @upload.save
+      render json: @upload.as_json, status: :created
+    else
+      render json: { errors: @upload.errors }, status: :unprocessable_entity
+    end
+  end
+  
+  def batch
+    uploads = []
+    errors = []
+    
+    params[:images]&.each_with_index do |image_param, index|
+      upload = Upload.new(name: image_param.original_filename)
+      upload.file.attach(image_param)
+      
+      if upload.save
+        uploads << upload.as_json
+      else
+        errors << { index: index, errors: upload.errors }
+      end
+    end
+    
+    render json: { uploads: uploads, errors: errors }
+  end
+  
+  def show
+    render json: @upload.as_json
+  end
+  
+  def destroy
+    @upload.destroy
+    head :no_content
+  end
+  
+  private
+  
+  def set_upload
+    @upload = Upload.find(params[:id])
+  end
+  
+  def upload_params
+    params.permit(:name)
+  end
+end
+```
+
+#### Database Migration
+```ruby
+# db/migrate/create_uploads.rb
+class CreateUploads < ActiveRecord::Migration[7.0]
+  def change
+    create_table :uploads, id: :uuid do |t|
+      t.string :name, null: false
+      t.text :description
+      t.timestamps
+    end
+    
+    add_index :uploads, :name
+  end
+end
+```
+
+#### Entity Image References
+Update the entity attributes to store image references:
+
+```ruby
+# In your entity creation/update
+def entity_params_with_images
+  params = base_entity_params
+  
+  # Handle single image fields
+  if params[:image_id].present?
+    upload = Upload.find_by(id: params[:image_id])
+    params[:image] = upload&.as_json
+  end
+  
+  # Handle gallery fields
+  if params[:gallery_ids].present?
+    uploads = Upload.where(id: params[:gallery_ids])
+    params[:gallery] = uploads.map(&:as_json)
+  end
+  
+  params.except(:image_id, :gallery_ids)
+end
+```
+
+#### Active Storage Configuration
+```ruby
+# config/storage.yml
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+# For production
+amazon:
+  service: S3
+  access_key_id: <%= Rails.application.credentials.dig(:aws, :access_key_id) %>
+  secret_access_key: <%= Rails.application.credentials.dig(:aws, :secret_access_key) %>
+  region: us-east-1
+  bucket: your-bucket-name
+
+# config/environments/production.rb
+config.active_storage.variant_processor = :mini_magick
+config.active_storage.service = :amazon
+```
+
+### Frontend API Integration Updates
+
+When ready to integrate with Rails backend, update the `apiService.js`:
+
+```javascript
+// In createEntity and updateEntity methods
+async createEntity(entityType, data) {
+  // Process image uploads first
+  const processedData = await this.processImagesForUpload(data);
+  
+  return this.request(`/${entityType}`, {
+    method: 'POST',
+    body: JSON.stringify({ [entityType.slice(0, -1)]: processedData }),
+  });
+}
+
+async processImagesForUpload(data) {
+  const processedData = { ...data };
+  
+  for (const [key, value] of Object.entries(data)) {
+    // Handle single image
+    if (value && value.file && value.dataUrl) {
+      const uploadResult = await this.uploadImage(value);
+      processedData[`${key}_id`] = uploadResult.id;
+      delete processedData[key];
+    }
+    
+    // Handle image gallery
+    if (Array.isArray(value) && value[0]?.file) {
+      const uploadResults = await this.uploadMultipleImages(value);
+      processedData[`${key}_ids`] = uploadResults.map(r => r.id);
+      delete processedData[key];
+    }
+  }
+  
+  return processedData;
+}
+```

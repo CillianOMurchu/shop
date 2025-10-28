@@ -10,6 +10,8 @@ const initialState = {
         { name: 'name', type: 'string', required: true, label: 'Product Name' },
         { name: 'description', type: 'text', required: false, label: 'Description' },
         { name: 'price', type: 'number', required: true, label: 'Price' },
+        { name: 'image', type: 'image', required: false, label: 'Product Image' },
+        { name: 'gallery', type: 'image_gallery', required: false, label: 'Image Gallery' },
         { name: 'active', type: 'boolean', required: false, label: 'Active', default: true },
       ],
       relationships: [
@@ -22,6 +24,7 @@ const initialState = {
       fields: [
         { name: 'name', type: 'string', required: true, label: 'Category Name' },
         { name: 'description', type: 'text', required: false, label: 'Description' },
+        { name: 'image', type: 'image', required: false, label: 'Category Image' },
         { name: 'active', type: 'boolean', required: false, label: 'Active', default: true },
       ],
       relationships: [

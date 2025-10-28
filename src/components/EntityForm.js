@@ -3,6 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import { selectSchemaByName } from '../store/slices/schemasSlice';
 import { selectAllEntitiesByType } from '../store/slices/entitiesSlice';
 import { createEntity, updateEntity, setRelationship } from '../store/slices/entitiesSlice';
+import ImageUpload from './ImageUpload';
+import { imageService } from '../services/imageService';
 
 const EntityForm = ({ entityType, entity, onClose }) => {
   const dispatch = useDispatch();
@@ -41,21 +43,47 @@ const EntityForm = ({ entityType, entity, onClose }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Process images before saving
+    const processedFormData = { ...formData };
+    
+    // Process single images
+    for (const [fieldName, value] of Object.entries(formData)) {
+      if (value && typeof value === 'object' && value.dataUrl) {
+        try {
+          processedFormData[fieldName] = await imageService.processImageForStorage(value);
+        } catch (error) {
+          console.error('Failed to process image:', error);
+        }
+      }
+      
+      // Process image galleries
+      if (Array.isArray(value) && value.length > 0 && value[0].dataUrl) {
+        try {
+          const processedImages = await Promise.all(
+            value.map(img => imageService.processImageForStorage(img))
+          );
+          processedFormData[fieldName] = processedImages;
+        } catch (error) {
+          console.error('Failed to process gallery images:', error);
+        }
+      }
+    }
     
     if (entity) {
       // Update existing entity
       dispatch(updateEntity({ 
         entityType, 
         entityId: entity.id, 
-        entityData: formData 
+        entityData: processedFormData 
       }));
     } else {
       // Create new entity
       dispatch(createEntity({ 
         entityType, 
-        entityData: formData 
+        entityData: processedFormData 
       }));
     }
 
@@ -117,6 +145,26 @@ const EntityForm = ({ entityType, entity, onClose }) => {
             type="checkbox"
             checked={value}
             onChange={(e) => handleFieldChange(field.name, e.target.checked)}
+          />
+        );
+      
+      case 'image':
+        return (
+          <ImageUpload
+            value={value}
+            onChange={(imageData) => handleFieldChange(field.name, imageData)}
+            multiple={false}
+            label={`Upload ${field.label}`}
+          />
+        );
+      
+      case 'image_gallery':
+        return (
+          <ImageUpload
+            value={value || []}
+            onChange={(imageArray) => handleFieldChange(field.name, imageArray)}
+            multiple={true}
+            label={`Upload ${field.label}`}
           />
         );
       
