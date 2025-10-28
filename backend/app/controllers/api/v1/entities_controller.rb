@@ -68,15 +68,28 @@ class Api::V1::EntitiesController < ApplicationController
 
   def entity_params
     # Get the schema for this entity type to determine allowed fields
-    schema = Schema.find_by(name: @entity_type.downcase)
+    # Use singular form since schemas are stored with singular names
+    schema = Schema.find_by(name: @entity_type.singularize.downcase)
     
     if schema&.fields.present?
       # Dynamic parameter filtering based on schema
       permitted_fields = schema.fields.map { |field| field['name'].to_sym }
-      base_params = [:name] + permitted_fields
+      
+      # Allow all fields defined in the schema, plus nested hashes for complex data like images
+      complex_fields = schema.fields.select { |field| ['image', 'image_gallery'].include?(field['type']) }
+      permitted_params = [:name] + permitted_fields
+      
+      # Add nested parameter permissions for image fields
+      complex_fields.each do |field|
+        if field['type'] == 'image'
+          permitted_params << { field['name'].to_sym => [:id, :name, :size, :dataUrl, :uploadStatus, :metadata] }
+        elsif field['type'] == 'image_gallery'
+          permitted_params << { field['name'].to_sym => [:id, :name, :size, :dataUrl, :uploadStatus, :metadata] }
+        end
+      end
       
       # Handle nested data structure
-      data_params = params.require(@entity_type.singularize.to_sym).permit(base_params)
+      data_params = params.require(@entity_type.singularize.to_sym).permit(permitted_params)
       
       # Extract name and organize the rest as data
       {
