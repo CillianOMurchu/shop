@@ -23,6 +23,7 @@ Visit `http://localhost:3000` to access the admin interface.
 ## Image Features
 
 ### Supported Image Operations
+
 - **Drag & Drop Upload**: Intuitive file upload interface
 - **Single Images**: Product photos, category banners, etc.
 - **Image Galleries**: Multiple images per entity (product galleries, etc.)
@@ -31,6 +32,7 @@ Visit `http://localhost:3000` to access the admin interface.
 - **File Validation**: Size and type checking
 
 ### Image Field Types
+
 - `image`: Single image field
 - `image_gallery`: Multiple images field
 
@@ -170,11 +172,13 @@ The system comes with three predefined schemas that now include image support:
 ## Image Storage
 
 ### Development (Current)
+
 - Images stored as base64 data URLs in Redux
 - Immediate preview without server upload
 - Perfect for development and prototyping
 
 ### Production (Future Rails Integration)
+
 - Images uploaded to Rails backend with Active Storage
 - Stored in cloud storage (S3, etc.)
 - Optimized thumbnails and variants
@@ -183,6 +187,7 @@ The system comes with three predefined schemas that now include image support:
 ## Future Rails Integration
 
 See `RAILS_API_STRUCTURE.md` for detailed backend implementation guide including:
+
 - Active Storage configuration
 - Image upload endpoints
 - Thumbnail generation
@@ -202,17 +207,17 @@ See `RAILS_API_STRUCTURE.md` for detailed backend implementation guide including
 ```javascript
 // Example: Custom image validation
 imageService.validateImage = (file) => {
-  const validTypes = ['image/jpeg', 'image/png'];
+  const validTypes = ["image/jpeg", "image/png"];
   const maxSize = 5 * 1024 * 1024; // 5MB
-  
+
   if (!validTypes.includes(file.type)) {
-    throw new Error('Only JPG and PNG allowed');
+    throw new Error("Only JPG and PNG allowed");
   }
-  
+
   if (file.size > maxSize) {
-    throw new Error('File too large');
+    throw new Error("File too large");
   }
-  
+
   return true;
 };
 ```
@@ -220,13 +225,14 @@ imageService.validateImage = (file) => {
 ## Data Structure (Updated)
 
 ### Entity Storage with Images
+
 ```javascript
 {
   entities: {
     data: {
       products: {
-        "uuid-1": { 
-          id: "uuid-1", 
+        "uuid-1": {
+          id: "uuid-1",
           name: "Product 1",
           image: {
             id: "img-1",
@@ -258,14 +264,22 @@ imageService.validateImage = (file) => {
 
 MIT License
 
-
 Cool images
 
 ## Screenshots
 
-
 ### A few changes
+
 ![Changes Interface](src/assets/changes.png)
 
 ### Cool Gem Name
+
 ![Cool Gem Name](src/assets/cool-gemname.png)
+
+### api update call
+
+![Api Update](src/assets/api-update-product-example.png)
+
+### category add to product call
+
+![Category add to product call](src/assets/category-add-to-products.png)
