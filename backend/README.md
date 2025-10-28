@@ -1,24 +1,11 @@
-# README
+### Cool Gem Name
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+![Cool Gem Name](src/assets/cool-gemname.png)
 
-Things you may want to cover:
+### api update call
 
-* Ruby version
+![Api Update](src/assets/api-update-product-example.png)
 
-* System dependencies
+### category add to product call
 
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+![Category add to product call](src/assets/category-add-to-products.png)
